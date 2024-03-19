@@ -20,3 +20,11 @@ env-2.7/
 **/._*
 **/.ipynb_checkpoints
 .vscode
+
+*.log
+
+lib/*.pyc
+
+citeulike-a/
+
+temp2.py
