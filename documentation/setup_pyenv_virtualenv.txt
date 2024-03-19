@@ -1,0 +1,22 @@
+# ===== If using pyenv to create virtual environments
+# Tried on mac redhat before
+https://stackoverflow.com/questions/63844926/mac-install-python3-6-with-brew
+https://ioflood.com/blog/pyenv/#:~:text=First%2C%20install%20pyenv%2Dvirtualenv%20using,pyenv%20virtualenv%203.8.
+https://github.com/pyenv/pyenv-virtualenv/issues/387
+
+# To uninstall the different python versions along with the environment
+pyenv uninstall 3.8.2
+
+# To activate pyenv environment
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+pyenv shell my_env
+
+# To deactivate the pyenv environment
+pyenv shell system
+
+# ==== If using virtualenv to create virtual environments
+https://tecadmin.net/create-python-virtual-environment-ubuntu/
