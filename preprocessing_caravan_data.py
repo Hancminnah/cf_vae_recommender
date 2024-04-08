@@ -58,3 +58,79 @@ predictions = algo.test(testset)
 mse = accuracy.mse(predictions)
 rmse = accuracy.rmse(predictions)
 # ========== #
+
+# ========== Find best algorithm for recommender ========== #
+# https://towardsdatascience.com/building-and-testing-recommender-systems-with-surprise-step-by-step-d4ba702ef80b
+from surprise import SVD, SVDpp, SlopeOne, NMF, NormalPredictor, KNNBaseline, KNNBasic, KNNWithMeans, KNNWithZScore, BaselineOnly, CoClustering
+from surprise.model_selection.validation import cross_validate
+from surprise.model_selection import GridSearchCV
+
+benchmark = []
+# Iterate over all algorithms
+for algorithm in [SVD(), SVDpp(), SlopeOne(), NMF(), NormalPredictor(), KNNBaseline(), KNNBasic(), KNNWithMeans(), KNNWithZScore(), BaselineOnly(), CoClustering()]:
+    # Perform cross validation
+    results = cross_validate(algorithm, caravan_data, measures=['RMSE'], cv=3, verbose=False)
+    # Get results & append algorithm name
+    tmp = pd.DataFrame.from_dict(results).mean(axis=0)
+    tmp = pd.concat([tmp,pd.Series([str(algorithm).split(' ')[0].split('.')[-1]], index=['Algorithm'])])
+    benchmark.append(tmp)
+pd.DataFrame(benchmark).set_index('Algorithm').sort_values('test_rmse') 
+
+# Original
+algo = KNNBaseline()
+cross_validate(algo, data, measures=['RMSE'], cv=3, verbose=False)
+
+# Using grid search cv doesn't quite gives the lowest rmse
+params = {
+    'bsl_options': {
+        'method': ['als', 'sgd'],
+        'reg': [1, 2],
+    },
+    'k': [2, 3],
+    'sim_options': {
+        'name': ['msd', 'cosine'],
+        'min_support': [1, 5],
+        'user_based': [False],
+    },
+}
+gs = GridSearchCV(KNNBaseline, param_grid=params, measures=["rmse", "mae"], cv=3, n_jobs=-1)
+gs.fit(caravan_data)
+print(gs.best_score["rmse"])
+print(gs.best_params["rmse"])
+
+# Heck just use original
+trainset, testset = train_test_split(caravan_data, test_size=0.25)
+algo = KNNBaseline()
+predictions = algo.fit(trainset).test(testset)
+accuracy.rmse(predictions)
+
+def get_Iu(uid):
+    """ return the number of items rated by given user
+    args: 
+      uid: the id of the user
+    returns: 
+      the number of items rated by the user
+    """
+    try:
+        return len(trainset.ur[trainset.to_inner_uid(uid)])
+    except ValueError: # user was not part of the trainset
+        return 0
+    
+def get_Ui(iid):
+    """ return number of users that have rated given item
+    args:
+      iid: the raw id of the item
+    returns:
+      the number of users that have rated the item.
+    """
+    try: 
+        return len(trainset.ir[trainset.to_inner_iid(iid)])
+    except ValueError:
+        return 0
+    
+df = pd.DataFrame(predictions, columns=['uid', 'iid', 'rui', 'est', 'details'])
+df['Iu'] = df.uid.apply(get_Iu)
+df['Ui'] = df.iid.apply(get_Ui)
+df['err'] = abs(df.est - df.rui)
+best_predictions = df.sort_values(by='err')[:10]
+worst_predictions = df.sort_values(by='err')[-10:]
